@@ -26,19 +26,20 @@ export const AuthProvider = ({ children }) => {
     const savedUser = localStorage.getItem('user');
     
     if (token && savedUser) {
-      const userData = JSON.parse(savedUser);
-      setUser(userData);
-      setUserRole(userData.role);
-      setIsAuthenticated(true);
-      
-      // Verify token with backend
       try {
+        const userData = JSON.parse(savedUser);
+        setUser(userData);
+        setUserRole(userData.role);
+        setIsAuthenticated(true);
+        
+        // Verify token with backend
         const response = await api.get('/auth/me');
         setUser(response.data);
         setUserRole(response.data.role);
         localStorage.setItem('user', JSON.stringify(response.data));
       } catch (error) {
         // Token invalid
+        console.error('Auth check failed:', error);
         logout();
       }
     }
@@ -46,18 +47,25 @@ export const AuthProvider = ({ children }) => {
   };
 
   const login = async (username, password) => {
-    const response = await api.post('/auth/login', { username, password });
-    const { access_token } = response.data;
-    
-    localStorage.setItem('token', access_token);
-    
-    const userResponse = await api.get('/auth/me');
-    setUser(userResponse.data);
-    setUserRole(userResponse.data.role);
-    setIsAuthenticated(true);
-    localStorage.setItem('user', JSON.stringify(userResponse.data));
-    
-    return userResponse.data;
+    try {
+      const response = await api.post('/auth/login', { username, password });
+      const { access_token } = response.data;
+      
+      localStorage.setItem('token', access_token);
+      
+      const userResponse = await api.get('/auth/me');
+      const userData = userResponse.data;
+      
+      setUser(userData);
+      setUserRole(userData.role);
+      setIsAuthenticated(true);
+      localStorage.setItem('user', JSON.stringify(userData));
+      
+      return userData;
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
   };
 
   const logout = () => {
