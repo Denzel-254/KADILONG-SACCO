@@ -29,6 +29,8 @@ const ActiveLoans = () => {
     }
   };
 
+  
+
   const handleRefresh = async () => {
     setRefreshing(true);
     await fetchActiveLoans();

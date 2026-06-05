@@ -14,6 +14,8 @@ const MyLoans = () => {
     fetchLoans();
   }, []);
 
+  
+
   const fetchLoans = async () => {
     try {
       const response = await loanAPI.getMyLoans();
@@ -24,6 +26,8 @@ const MyLoans = () => {
       setLoading(false);
     }
   };
+
+
 
   const viewSchedule = async (loanId) => {
     try {
