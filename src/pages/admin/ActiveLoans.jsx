@@ -49,7 +49,16 @@ const ActiveLoans = () => {
   const calculateProgress = (loan) => {
     const totalLoanAmount = loan.amount_approved + (loan.total_interest_expected || 0);
     if (totalLoanAmount === 0) return 0;
-    return Math.round((loan.total_paid / totalLoanAmount) * 100);
+    let progress = (loan.total_paid / totalLoanAmount) * 100;
+    // Cap progress at 100%
+    if (progress > 100) progress = 100;
+    // Round to nearest integer
+    return Math.round(progress);
+  };
+
+  // Helper to round amounts
+  const roundAmount = (amount) => {
+    return Math.round(amount || 0);
   };
 
   if (loading) {
@@ -86,19 +95,19 @@ const ActiveLoans = () => {
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
           <p className="text-sm text-gray-600">Total Outstanding</p>
           <p className="text-2xl font-bold text-blue-600">
-            KES {loans.reduce((sum, l) => sum + (l.remaining_balance || 0), 0).toLocaleString()}
+            KES {roundAmount(loans.reduce((sum, l) => sum + (l.remaining_balance || 0), 0)).toLocaleString()}
           </p>
         </div>
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
           <p className="text-sm text-gray-600">Average Loan Size</p>
           <p className="text-2xl font-bold text-gray-900">
-            KES {loans.length > 0 ? Math.round(loans.reduce((sum, l) => sum + l.amount_approved, 0) / loans.length).toLocaleString() : 0}
+            KES {loans.length > 0 ? roundAmount(loans.reduce((sum, l) => sum + l.amount_approved, 0) / loans.length).toLocaleString() : 0}
           </p>
         </div>
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
           <p className="text-sm text-gray-600">Total Repaid</p>
           <p className="text-2xl font-bold text-green-600">
-            KES {loans.reduce((sum, l) => sum + (l.total_paid || 0), 0).toLocaleString()}
+            KES {roundAmount(loans.reduce((sum, l) => sum + (l.total_paid || 0), 0)).toLocaleString()}
           </p>
         </div>
       </div>
@@ -128,58 +137,61 @@ const ActiveLoans = () => {
                   </td>
                 </tr>
               ) : (
-                loans.map((loan) => (
-                  <tr key={loan.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">{loan.loan_number}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                          <FiUser className="w-4 h-4 text-blue-600" />
+                loans.map((loan) => {
+                  const progress = calculateProgress(loan);
+                  return (
+                    <tr key={loan.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">{loan.loan_number}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                            <FiUser className="w-4 h-4 text-blue-600" />
+                          </div>
+                          <div className="ml-3">
+                            <p className="text-sm font-medium text-gray-900">{loan.member_name || 'Unknown'}</p>
+                            <p className="text-xs text-gray-500">{loan.member_number}</p>
+                          </div>
                         </div>
-                        <div className="ml-3">
-                          <p className="text-sm font-medium text-gray-900">{loan.member_name || 'Unknown'}</p>
-                          <p className="text-xs text-gray-500">{loan.member_number}</p>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                        KES {roundAmount(loan.amount_approved).toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {loan.interest_rate}%
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="w-32">
+                          <div className="flex justify-between text-xs mb-1">
+                            <span className="text-gray-600">Progress</span>
+                            <span className="font-semibold">{progress}%</span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                            <div 
+                              className="bg-green-500 rounded-full h-1.5 transition-all duration-300"
+                              style={{ width: `${progress}%` }}
+                            />
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                      KES {loan.amount_approved.toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {loan.interest_rate}%
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="w-32">
-                        <div className="flex justify-between text-xs mb-1">
-                          <span className="text-gray-600">Progress</span>
-                          <span className="font-semibold">{calculateProgress(loan)}%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-1.5">
-                          <div 
-                            className="bg-green-500 rounded-full h-1.5"
-                            style={{ width: `${calculateProgress(loan)}%` }}
-                          />
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {loan.next_payment_date ? new Date(loan.next_payment_date).toLocaleDateString() : 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
-                        {loan.status === 'active' ? 'Active' : 'Disbursed'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <button
-                        onClick={() => viewSchedule(loan.id)}
-                        className="text-blue-600 hover:text-blue-800 flex items-center"
-                      >
-                        <FiEye className="w-4 h-4 mr-1" /> Schedule
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {loan.next_payment_date ? new Date(loan.next_payment_date).toLocaleDateString() : 'N/A'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
+                          {loan.status === 'active' ? 'Active' : 'Disbursed'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <button
+                          onClick={() => viewSchedule(loan.id)}
+                          className="text-blue-600 hover:text-blue-800 flex items-center"
+                        >
+                          <FiEye className="w-4 h-4 mr-1" /> Schedule
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -211,11 +223,11 @@ const ActiveLoans = () => {
                 </div>
                 <div className="bg-yellow-50 p-3 rounded-lg">
                   <p className="text-xs text-gray-600">Total Paid</p>
-                  <p className="text-lg font-bold text-gray-900">KES {schedule.total_paid?.toLocaleString()}</p>
+                  <p className="text-lg font-bold text-gray-900">KES {roundAmount(schedule.total_paid).toLocaleString()}</p>
                 </div>
                 <div className="bg-orange-50 p-3 rounded-lg">
                   <p className="text-xs text-gray-600">Remaining</p>
-                  <p className="text-lg font-bold text-gray-900">KES {schedule.total_due?.toLocaleString()}</p>
+                  <p className="text-lg font-bold text-gray-900">KES {roundAmount(schedule.total_due).toLocaleString()}</p>
                 </div>
               </div>
               <div className="space-y-2">
@@ -226,7 +238,7 @@ const ActiveLoans = () => {
                       <p className="text-xs text-gray-500">Due: {new Date(inst.due_date).toLocaleDateString()}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-gray-900">KES {inst.amount_due?.toLocaleString()}</p>
+                      <p className="font-semibold text-gray-900">KES {roundAmount(inst.amount_due).toLocaleString()}</p>
                       <p className="text-xs text-gray-500">{inst.is_paid ? '✓ Paid' : 'Pending'}</p>
                     </div>
                   </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FiEye, FiCheckCircle, FiXCircle, FiDollarSign, FiUser, FiCalendar, FiClock, FiSend } from 'react-icons/fi';
+import { FiCheckCircle, FiXCircle, FiUser, FiSend, FiRefreshCw } from 'react-icons/fi';
 import { adminAPI, loanAPI } from '../../services/api';
 import toast from 'react-hot-toast';
 
@@ -8,17 +8,18 @@ const LoanApprovals = () => {
   const [pendingLoans, setPendingLoans] = useState([]);
   const [approvedLoans, setApprovedLoans] = useState([]);
   const [selectedLoan, setSelectedLoan] = useState(null);
-  const [showModal, setShowModal] = useState(false);
+  const [showApproveModal, setShowApproveModal] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
   const [showDisburseModal, setShowDisburseModal] = useState(false);
   const [approveAmount, setApproveAmount] = useState('');
   const [rejectReason, setRejectReason] = useState('');
-  const [actionType, setActionType] = useState(null);
   const [disburseData, setDisburseData] = useState({
     disbursement_method: 'mpesa',
     mpesa_receipt_number: '',
     bank_reference: '',
     notes: '',
   });
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     fetchLoans();
@@ -26,18 +27,25 @@ const LoanApprovals = () => {
 
   const fetchLoans = async () => {
     try {
-      const response = await adminAPI.getPendingLoans();
-      const allLoans = response.data || [];
-      setPendingLoans(allLoans.filter(loan => loan.status === 'pending'));
-      setApprovedLoans(allLoans.filter(loan => loan.status === 'approved'));
+      const [pendingRes, approvedRes] = await Promise.all([
+        adminAPI.getPendingLoans(),
+        loanAPI.getApprovedLoans()
+      ]);
+      setPendingLoans(pendingRes.data || []);
+      setApprovedLoans(approvedRes.data || []);
     } catch (error) {
       console.error('Error fetching loans:', error);
       toast.error('Failed to load loans');
-      setPendingLoans([]);
-      setApprovedLoans([]);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchLoans();
+    toast.success('Loans refreshed');
   };
 
   const handleApprove = async () => {
@@ -51,8 +59,8 @@ const LoanApprovals = () => {
         amount_approved: parseFloat(approveAmount),
         rejection_reason: null,
       });
-      toast.success('Loan approved successfully!');
-      setShowModal(false);
+      toast.success(`Loan ${selectedLoan.loan_number} approved successfully!`);
+      setShowApproveModal(false);
       setSelectedLoan(null);
       setApproveAmount('');
       fetchLoans();
@@ -72,8 +80,8 @@ const LoanApprovals = () => {
         amount_approved: 0,
         rejection_reason: rejectReason,
       });
-      toast.success('Loan rejected');
-      setShowModal(false);
+      toast.success(`Loan ${selectedLoan.loan_number} rejected`);
+      setShowRejectModal(false);
       setSelectedLoan(null);
       setRejectReason('');
       fetchLoans();
@@ -90,7 +98,7 @@ const LoanApprovals = () => {
         bank_reference: disburseData.bank_reference || null,
         notes: disburseData.notes || null,
       });
-      toast.success('Loan disbursed successfully!');
+      toast.success(`Loan ${selectedLoan.loan_number} disbursed successfully!`);
       setShowDisburseModal(false);
       setSelectedLoan(null);
       setDisburseData({
@@ -125,12 +133,22 @@ const LoanApprovals = () => {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Loan Management</h1>
-        <p className="text-gray-600 mt-1">Review, approve, and disburse loan applications</p>
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Loan Management</h1>
+          <p className="text-gray-600 mt-1">Review, approve, and disburse loan applications</p>
+        </div>
+        <button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center disabled:opacity-50"
+        >
+          <FiRefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+          {refreshing ? 'Refreshing...' : 'Refresh'}
+        </button>
       </div>
 
-      {/* Stats */}
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <div className="bg-yellow-50 rounded-xl p-6 border border-yellow-200">
           <p className="text-sm text-yellow-700">Pending Approvals</p>
@@ -144,7 +162,7 @@ const LoanApprovals = () => {
         </div>
       </div>
 
-      {/* Pending Loans Table */}
+      {/* Pending Applications Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-8">
         <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
           <h2 className="text-lg font-semibold text-gray-900">Pending Applications ({pendingLoans.length})</h2>
@@ -154,7 +172,8 @@ const LoanApprovals = () => {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Loan Number</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Member</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Member Name</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Member ID</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Period</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Applied Date</th>
@@ -164,7 +183,7 @@ const LoanApprovals = () => {
             <tbody className="divide-y divide-gray-200">
               {pendingLoans.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
                     No pending loan applications
                   </td>
                 </tr>
@@ -172,16 +191,11 @@ const LoanApprovals = () => {
                 pendingLoans.map((loan) => (
                   <tr key={loan.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">{loan.loan_number}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                          <FiUser className="w-4 h-4 text-blue-600" />
-                        </div>
-                        <div className="ml-3">
-                          <p className="text-sm font-medium text-gray-900">{loan.member_name || 'Unknown'}</p>
-                          <p className="text-xs text-gray-500">{loan.member_number}</p>
-                        </div>
-                      </div>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {loan.member_name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {loan.member_national_id || loan.member_number}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
                       KES {loan.amount_applied?.toLocaleString()}
@@ -198,8 +212,7 @@ const LoanApprovals = () => {
                           onClick={() => {
                             setSelectedLoan(loan);
                             setApproveAmount(loan.amount_applied.toString());
-                            setActionType('approve');
-                            setShowModal(true);
+                            setShowApproveModal(true);
                           }}
                           className="bg-green-600 text-white px-3 py-1 rounded-lg hover:bg-green-700 transition text-xs flex items-center"
                         >
@@ -208,8 +221,7 @@ const LoanApprovals = () => {
                         <button
                           onClick={() => {
                             setSelectedLoan(loan);
-                            setActionType('reject');
-                            setShowModal(true);
+                            setShowRejectModal(true);
                           }}
                           className="bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition text-xs flex items-center"
                         >
@@ -225,7 +237,7 @@ const LoanApprovals = () => {
         </div>
       </div>
 
-      {/* Approved Loans Table */}
+      {/* Approved Loans Ready for Disbursement Table */}
       {approvedLoans.length > 0 && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
@@ -236,8 +248,10 @@ const LoanApprovals = () => {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Loan Number</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Member</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Member Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Member ID</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount Approved</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Approved Date</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
               </thead>
@@ -245,19 +259,17 @@ const LoanApprovals = () => {
                 {approvedLoans.map((loan) => (
                   <tr key={loan.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">{loan.loan_number}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                          <FiUser className="w-4 h-4 text-blue-600" />
-                        </div>
-                        <div className="ml-3">
-                          <p className="text-sm font-medium text-gray-900">{loan.member_name || 'Unknown'}</p>
-                          <p className="text-xs text-gray-500">{loan.member_number}</p>
-                        </div>
-                      </div>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {loan.member_name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {loan.member_number}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
                       KES {loan.amount_approved?.toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {loan.approved_date ? new Date(loan.approved_date).toLocaleDateString() : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <button
@@ -278,14 +290,12 @@ const LoanApprovals = () => {
         </div>
       )}
 
-      {/* Approval/Rejection Modal */}
-      {showModal && selectedLoan && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
+      {/* Approve Modal */}
+      {showApproveModal && selectedLoan && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowApproveModal(false)}>
           <div className="bg-white rounded-xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
             <div className="p-6 border-b border-gray-100">
-              <h2 className="text-xl font-bold text-gray-900">
-                {actionType === 'approve' ? 'Approve Loan Application' : 'Reject Loan Application'}
-              </h2>
+              <h2 className="text-xl font-bold text-gray-900">Approve Loan</h2>
             </div>
             <div className="p-6 space-y-4">
               <div className="bg-gray-50 p-4 rounded-lg">
@@ -297,58 +307,83 @@ const LoanApprovals = () => {
                 <p className="font-semibold">KES {selectedLoan.amount_applied.toLocaleString()}</p>
               </div>
 
-              {actionType === 'approve' ? (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Approval Amount (KES)</label>
-                    <input
-                      type="number"
-                      value={approveAmount}
-                      onChange={(e) => setApproveAmount(e.target.value)}
-                      max={selectedLoan.amount_applied}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Max: KES {selectedLoan.amount_applied.toLocaleString()}</p>
-                  </div>
-                  <button
-                    onClick={handleApprove}
-                    className="w-full bg-green-600 text-white py-2 rounded-lg font-semibold hover:bg-green-700 transition"
-                  >
-                    Confirm Approval
-                  </button>
-                </>
-              ) : (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Rejection Reason</label>
-                    <textarea
-                      value={rejectReason}
-                      onChange={(e) => setRejectReason(e.target.value)}
-                      rows={3}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
-                      placeholder="Enter reason for rejection..."
-                    />
-                  </div>
-                  <button
-                    onClick={handleReject}
-                    className="w-full bg-red-600 text-white py-2 rounded-lg font-semibold hover:bg-red-700 transition"
-                  >
-                    Confirm Rejection
-                  </button>
-                </>
-              )}
-              <button
-                onClick={() => setShowModal(false)}
-                className="w-full border border-gray-300 text-gray-700 py-2 rounded-lg font-semibold hover:bg-gray-50 transition"
-              >
-                Cancel
-              </button>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Approval Amount (KES)</label>
+                <input
+                  type="number"
+                  value={approveAmount}
+                  onChange={(e) => setApproveAmount(e.target.value)}
+                  max={selectedLoan.amount_applied}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">Max: KES {selectedLoan.amount_applied.toLocaleString()}</p>
+              </div>
+
+              <div className="flex space-x-3">
+                <button
+                  onClick={handleApprove}
+                  className="flex-1 bg-green-600 text-white py-2 rounded-lg font-semibold hover:bg-green-700 transition"
+                >
+                  Confirm Approval
+                </button>
+                <button
+                  onClick={() => setShowApproveModal(false)}
+                  className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Disbursement Modal - Same as before */}
+      {/* Reject Modal */}
+      {showRejectModal && selectedLoan && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowRejectModal(false)}>
+          <div className="bg-white rounded-xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-100">
+              <h2 className="text-xl font-bold text-gray-900">Reject Loan</h2>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm text-gray-600">Loan Number</p>
+                <p className="font-semibold">{selectedLoan.loan_number}</p>
+                <p className="text-sm text-gray-600 mt-2">Member</p>
+                <p className="font-semibold">{selectedLoan.member_name}</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Rejection Reason</label>
+                <textarea
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  rows={3}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                  placeholder="Enter reason for rejection..."
+                />
+              </div>
+
+              <div className="flex space-x-3">
+                <button
+                  onClick={handleReject}
+                  className="flex-1 bg-red-600 text-white py-2 rounded-lg font-semibold hover:bg-red-700 transition"
+                >
+                  Confirm Rejection
+                </button>
+                <button
+                  onClick={() => setShowRejectModal(false)}
+                  className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Disburse Modal */}
       {showDisburseModal && selectedLoan && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowDisburseModal(false)}>
           <div className="bg-white rounded-xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
@@ -384,7 +419,7 @@ const LoanApprovals = () => {
                     value={disburseData.mpesa_receipt_number}
                     onChange={(e) => setDisburseData({ ...disburseData, mpesa_receipt_number: e.target.value })}
                     placeholder="e.g., QWER123456"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                   />
                 </div>
               )}
@@ -397,7 +432,7 @@ const LoanApprovals = () => {
                     value={disburseData.bank_reference}
                     onChange={(e) => setDisburseData({ ...disburseData, bank_reference: e.target.value })}
                     placeholder="Enter bank reference"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                   />
                 </div>
               )}
@@ -409,7 +444,7 @@ const LoanApprovals = () => {
                   onChange={(e) => setDisburseData({ ...disburseData, notes: e.target.value })}
                   rows={2}
                   placeholder="Any additional notes..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                 />
               </div>
 
@@ -422,7 +457,7 @@ const LoanApprovals = () => {
                 </button>
                 <button
                   onClick={() => setShowDisburseModal(false)}
-                  className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg font-semibold hover:bg-gray-50 transition"
+                  className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-50"
                 >
                   Cancel
                 </button>

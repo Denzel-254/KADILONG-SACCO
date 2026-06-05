@@ -72,6 +72,8 @@ export const loanAPI = {
   makePayment: (loanId, params) => api.post(`/loans/${loanId}/pay`, null, { params }),
   getLoanSummary: () => api.get('/loans/my-summary'),
   getAllActiveLoans: () => api.get('/loans/admin/active-loans'),
+  getApprovedLoans: () => api.get('/loans/applications/approved'),
+
 
 };
 

@@ -33,28 +33,63 @@ const Dashboard = () => {
     }
   };
 
+  // Helper function to round numbers and ensure no decimals
+  const roundNumber = (num) => {
+    return Math.round(num);
+  };
+
+  // Helper function to get progress percentage (capped at 100%)
+  const getProgressPercentage = () => {
+    let progress = loanSummary?.summary?.repayment_progress || 0;
+    // Cap at 100%
+    if (progress > 100) progress = 100;
+    // Round to nearest integer
+    return Math.round(progress);
+  };
+
+  // Round all amounts to whole numbers
+  const getRoundedTotalBorrowed = () => {
+    return roundNumber(loanSummary?.summary?.total_borrowed || 0);
+  };
+
+  const getRoundedTotalRepaid = () => {
+    return roundNumber(loanSummary?.summary?.total_repaid || 0);
+  };
+
+  const getRoundedTotalOutstanding = () => {
+    return roundNumber(loanSummary?.summary?.total_outstanding || 0);
+  };
+
+  const getRoundedSavingsBalance = () => {
+    return roundNumber(savingsAccounts.reduce((sum, acc) => sum + acc.balance, 0));
+  };
+
+  const getRoundedAmountDue = (amount) => {
+    return roundNumber(amount);
+  };
+
   const stats = [
     {
       title: 'Total Borrowed',
-      value: `KES ${loanSummary?.summary?.total_borrowed?.toLocaleString() || '0'}`,
+      value: `KES ${getRoundedTotalBorrowed().toLocaleString()}`,
       icon: FiCreditCard,
       color: 'bg-blue-500',
     },
     {
       title: 'Total Repaid',
-      value: `KES ${loanSummary?.summary?.total_repaid?.toLocaleString() || '0'}`,
+      value: `KES ${getRoundedTotalRepaid().toLocaleString()}`,
       icon: FiTrendingUp,
       color: 'bg-green-500',
     },
     {
       title: 'Outstanding Balance',
-      value: `KES ${loanSummary?.summary?.total_outstanding?.toLocaleString() || '0'}`,
+      value: `KES ${getRoundedTotalOutstanding().toLocaleString()}`,
       icon: FiDollarSign,
       color: 'bg-orange-500',
     },
     {
       title: 'Savings Balance',
-      value: `KES ${savingsAccounts.reduce((sum, acc) => sum + acc.balance, 0).toLocaleString()}`,
+      value: `KES ${getRoundedSavingsBalance().toLocaleString()}`,
       icon: FiClock,
       color: 'bg-purple-500',
     },
@@ -106,12 +141,12 @@ const Dashboard = () => {
             <div className="mb-6">
               <div className="flex justify-between mb-2">
                 <span className="text-gray-600">Repayment Progress</span>
-                <span className="text-gray-900 font-semibold">{loanSummary?.summary?.repayment_progress || 0}%</span>
+                <span className="text-gray-900 font-semibold">{getProgressPercentage()}%</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                 <div 
                   className="bg-green-500 rounded-full h-2 transition-all duration-500"
-                  style={{ width: `${loanSummary?.summary?.repayment_progress || 0}%` }}
+                  style={{ width: `${getProgressPercentage()}%` }}
                 />
               </div>
             </div>
@@ -124,7 +159,7 @@ const Dashboard = () => {
                     <p className="text-xs text-gray-500">Due: {payment.due_date}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-semibold text-gray-900">KES {payment.amount_due.toLocaleString()}</p>
+                    <p className="text-sm font-semibold text-gray-900">KES {getRoundedAmountDue(payment.amount_due).toLocaleString()}</p>
                     <p className="text-xs text-orange-600">{payment.days_until_due} days left</p>
                   </div>
                 </div>
@@ -146,11 +181,11 @@ const Dashboard = () => {
               <span className="text-blue-700">Apply for Loan</span>
               <FiPlus className="w-5 h-5 text-blue-700" />
             </Link>
-            <Link to="/savings/deposit" className="flex items-center justify-between w-full p-3 bg-green-50 rounded-lg hover:bg-green-100 transition">
+            <Link to="/savings" className="flex items-center justify-between w-full p-3 bg-green-50 rounded-lg hover:bg-green-100 transition">
               <span className="text-green-700">Make a Deposit</span>
               <FiDollarSign className="w-5 h-5 text-green-700" />
             </Link>
-            <Link to="/repayments" className="flex items-center justify-between w-full p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition">
+            <Link to="/loans" className="flex items-center justify-between w-full p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition">
               <span className="text-purple-700">Make a Payment</span>
               <FiCreditCard className="w-5 h-5 text-purple-700" />
             </Link>
