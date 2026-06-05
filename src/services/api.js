@@ -107,6 +107,7 @@ export const adminAPI = {
   createPaymentPlan: (data) => api.post('/collection/payment-plans', data),
   updatePaymentPlan: (planId, data) => api.put(`/collection/payment-plans/${planId}`, data),
   getDefaulters: () => api.get('/penalty/defaulters'),
+  deleteMember: (memberId) => api.delete(`/members/${memberId}`),
 
 
 
