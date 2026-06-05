@@ -1,27 +1,28 @@
 import { useState, useEffect } from 'react';
-import { FiUsers, FiCreditCard, FiDollarSign, FiAlertCircle, FiTrendingUp, FiShield, FiClock, FiCheckCircle, FiXCircle } from 'react-icons/fi';
-import { adminAPI, reportAPI, loanAPI, savingsAPI } from '../../services/api';
+import { Link } from 'react-router-dom';
+import { 
+  FiUsers, FiCreditCard, FiDollarSign, FiAlertCircle, 
+  FiTrendingUp, FiClock, FiCheckCircle, FiRefreshCw 
+} from 'react-icons/fi';
+import { adminAPI, reportAPI, savingsAPI } from '../../services/api';
 import toast from 'react-hot-toast';
 
 const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [kpiData, setKpiData] = useState(null);
   const [pendingApprovals, setPendingApprovals] = useState([]);
   const [overdueLoans, setOverdueLoans] = useState([]);
-  const [recentActivities, setRecentActivities] = useState([]);
   const [savingsStats, setSavingsStats] = useState(null);
+  const [lastUpdated, setLastUpdated] = useState(new Date());
 
   useEffect(() => {
     fetchDashboardData();
-    // Refresh every 30 seconds
-    const interval = setInterval(fetchDashboardData, 30000);
-    return () => clearInterval(interval);
   }, []);
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (showToast = false) => {
     setLoading(true);
     try {
-      // Fetch all dashboard data in parallel
       const [kpiRes, pendingLoansRes, overdueRes, savingsRes] = await Promise.all([
         reportAPI.getKPIDashboard(new Date().toISOString().split('T')[0]),
         adminAPI.getPendingLoans(),
@@ -33,32 +34,25 @@ const AdminDashboard = () => {
       setPendingApprovals(pendingLoansRes.data || []);
       setOverdueLoans(overdueRes.data?.overdue_loans || []);
       setSavingsStats(savingsRes.data);
+      setLastUpdated(new Date());
 
-      // Generate recent activities (mock for now - can be replaced with real activity log)
-      setRecentActivities([
-        {
-          id: 1,
-          type: 'loan_application',
-          message: `New loan application from Member`,
-          time: new Date().toLocaleTimeString(),
-          icon: FiCreditCard,
-          color: 'blue'
-        },
-        {
-          id: 2,
-          type: 'payment',
-          message: `Loan payment received`,
-          time: new Date().toLocaleTimeString(),
-          icon: FiDollarSign,
-          color: 'green'
-        },
-      ]);
+      if (showToast) {
+        toast.success('Dashboard refreshed successfully!');
+      }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-      toast.error('Failed to load dashboard data');
+      if (showToast) {
+        toast.error('Failed to refresh dashboard');
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchDashboardData(true);
+    setRefreshing(false);
   };
 
   const stats = [
@@ -92,19 +86,11 @@ const AdminDashboard = () => {
     },
   ];
 
-  const getPendingCount = () => {
-    return pendingApprovals.length;
-  };
+  const getPendingCount = () => pendingApprovals.length;
+  const getOverdueCount = () => overdueLoans.length;
+  const getTotalOverdueAmount = () => overdueLoans.reduce((sum, loan) => sum + (loan.amount_overdue || 0), 0);
 
-  const getOverdueCount = () => {
-    return overdueLoans.length;
-  };
-
-  const getTotalOverdueAmount = () => {
-    return overdueLoans.reduce((sum, loan) => sum + (loan.amount_overdue || 0), 0);
-  };
-
-  if (loading) {
+  if (loading && !refreshing) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -114,9 +100,20 @@ const AdminDashboard = () => {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-        <p className="text-gray-600 mt-1">Welcome back! Here's what's happening with your SACCO today.</p>
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+          <p className="text-gray-600 mt-1">Welcome back! Here's what's happening with your SACCO today.</p>
+          <p className="text-xs text-gray-400 mt-1">Last updated: {lastUpdated.toLocaleTimeString()}</p>
+        </div>
+        <button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center disabled:opacity-50"
+        >
+          <FiRefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+          {refreshing ? 'Refreshing...' : 'Refresh Dashboard'}
+        </button>
       </div>
 
       {/* Stats Grid */}
@@ -143,20 +140,14 @@ const AdminDashboard = () => {
           <p className="text-sm opacity-90">Repayment Rate</p>
           <p className="text-3xl font-bold mt-2">{kpiData?.loan_repayment_rate || 0}%</p>
           <div className="mt-3 w-full bg-white/20 rounded-full h-2">
-            <div 
-              className="bg-white rounded-full h-2"
-              style={{ width: `${kpiData?.loan_repayment_rate || 0}%` }}
-            />
+            <div className="bg-white rounded-full h-2" style={{ width: `${kpiData?.loan_repayment_rate || 0}%` }} />
           </div>
         </div>
         <div className="bg-gradient-to-r from-red-500 to-red-600 rounded-xl p-6 text-white">
           <p className="text-sm opacity-90">Portfolio at Risk</p>
           <p className="text-3xl font-bold mt-2">{kpiData?.portfolio_at_risk || 0}%</p>
           <div className="mt-3 w-full bg-white/20 rounded-full h-2">
-            <div 
-              className="bg-white rounded-full h-2"
-              style={{ width: `${Math.min(kpiData?.portfolio_at_risk || 0, 100)}%` }}
-            />
+            <div className="bg-white rounded-full h-2" style={{ width: `${Math.min(kpiData?.portfolio_at_risk || 0, 100)}%` }} />
           </div>
         </div>
         <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-xl p-6 text-white">
@@ -171,14 +162,13 @@ const AdminDashboard = () => {
         </div>
       </div>
 
+      {/* Two Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Recent Loan Applications */}
+        {/* Pending Loan Applications */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100">
           <div className="p-6 border-b border-gray-100 flex justify-between items-center">
             <h2 className="text-lg font-semibold text-gray-900">Pending Loan Applications</h2>
-            <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">
-              {getPendingCount()} pending
-            </span>
+            <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">{getPendingCount()} pending</span>
           </div>
           <div className="divide-y divide-gray-100 max-h-96 overflow-y-auto">
             {pendingApprovals.length === 0 ? (
@@ -194,9 +184,7 @@ const AdminDashboard = () => {
                     <p className="text-sm text-gray-500">KES {loan.amount_applied?.toLocaleString()}</p>
                     <p className="text-xs text-gray-400">{new Date(loan.applied_date).toLocaleDateString()}</p>
                   </div>
-                  <span className="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">
-                    Pending
-                  </span>
+                  <span className="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">Pending</span>
                 </div>
               ))
             )}
@@ -207,9 +195,7 @@ const AdminDashboard = () => {
         <div className="bg-white rounded-xl shadow-sm border border-gray-100">
           <div className="p-6 border-b border-gray-100 flex justify-between items-center">
             <h2 className="text-lg font-semibold text-gray-900">Overdue Loans</h2>
-            <span className="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">
-              {getOverdueCount()} overdue
-            </span>
+            <span className="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">{getOverdueCount()} overdue</span>
           </div>
           <div className="divide-y divide-gray-100 max-h-96 overflow-y-auto">
             {overdueLoans.length === 0 ? (
@@ -228,8 +214,7 @@ const AdminDashboard = () => {
                   <span className={`px-2 py-1 text-xs rounded-full ${
                     loan.days_overdue > 90 ? 'bg-gray-800 text-white' :
                     loan.days_overdue > 60 ? 'bg-red-600 text-white' :
-                    loan.days_overdue > 30 ? 'bg-orange-500 text-white' :
-                    'bg-yellow-500 text-white'
+                    loan.days_overdue > 30 ? 'bg-orange-500 text-white' : 'bg-yellow-500 text-white'
                   }`}>
                     {loan.days_overdue > 90 ? 'Critical' :
                      loan.days_overdue > 60 ? 'Severe' :
@@ -238,6 +223,34 @@ const AdminDashboard = () => {
                 </div>
               ))
             )}
+          </div>
+        </div>
+      </div>
+
+      {/* Second Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+        {/* Quick Actions */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+          <div className="p-6 border-b border-gray-100">
+            <h2 className="text-lg font-semibold text-gray-900">Quick Actions</h2>
+          </div>
+          <div className="p-6 space-y-4">
+            <Link to="/admin/loan-approvals" className="w-full flex items-center justify-between p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition group">
+              <span className="text-blue-700">Review Pending Loan Applications</span>
+              <FiAlertCircle className="w-5 h-5 text-blue-700 group-hover:translate-x-1 transition" />
+            </Link>
+            <Link to="/admin/members" className="w-full flex items-center justify-between p-3 bg-green-50 rounded-lg hover:bg-green-100 transition group">
+              <span className="text-green-700">Add New Member</span>
+              <FiUsers className="w-5 h-5 text-green-700 group-hover:translate-x-1 transition" />
+            </Link>
+            <Link to="/admin/reports" className="w-full flex items-center justify-between p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition group">
+              <span className="text-purple-700">Generate Reports</span>
+              <FiTrendingUp className="w-5 h-5 text-purple-700 group-hover:translate-x-1 transition" />
+            </Link>
+            <Link to="/admin/defaulters" className="w-full flex items-center justify-between p-3 bg-red-50 rounded-lg hover:bg-red-100 transition group">
+              <span className="text-red-700">View Overdue Loans</span>
+              <FiClock className="w-5 h-5 text-red-700 group-hover:translate-x-1 transition" />
+            </Link>
           </div>
         </div>
 
@@ -265,31 +278,6 @@ const AdminDashboard = () => {
                 </div>
               ))}
             </div>
-          </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-          <div className="p-6 border-b border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-900">Quick Actions</h2>
-          </div>
-          <div className="p-6 space-y-4">
-            <button className="w-full flex items-center justify-between p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition">
-              <span className="text-blue-700">Review Pending Loan Applications</span>
-              <FiAlertCircle className="w-5 h-5 text-blue-700" />
-            </button>
-            <button className="w-full flex items-center justify-between p-3 bg-green-50 rounded-lg hover:bg-green-100 transition">
-              <span className="text-green-700">Add New Member</span>
-              <FiUsers className="w-5 h-5 text-green-700" />
-            </button>
-            <button className="w-full flex items-center justify-between p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition">
-              <span className="text-purple-700">Generate Reports</span>
-              <FiTrendingUp className="w-5 h-5 text-purple-700" />
-            </button>
-            <button className="w-full flex items-center justify-between p-3 bg-red-50 rounded-lg hover:bg-red-100 transition">
-              <span className="text-red-700">View Overdue Loans</span>
-              <FiClock className="w-5 h-5 text-red-700" />
-            </button>
           </div>
         </div>
       </div>

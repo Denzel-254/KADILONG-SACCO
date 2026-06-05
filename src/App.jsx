@@ -27,6 +27,8 @@ import PenaltySettings from './pages/admin/PenaltySettings';
 import ActiveCases from './pages/admin/ActiveCases';
 import PaymentPlans from './pages/admin/PaymentPlans';
 import SystemSettings from './pages/admin/SystemSettings';
+import ProfileSettings from './pages/ProfileSettings';
+
 
 
 
@@ -138,6 +140,15 @@ function AppContent() {
   element={
     <ProtectedRoute allowedRoles={['member', 'admin', 'super_admin']}>
       <MakePayment />
+    </ProtectedRoute>
+  } 
+/>
+
+<Route 
+  path="/profile" 
+  element={
+    <ProtectedRoute allowedRoles={['member', 'admin', 'super_admin']}>
+      <ProfileSettings />
     </ProtectedRoute>
   } 
 />

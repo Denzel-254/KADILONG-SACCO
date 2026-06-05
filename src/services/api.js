@@ -40,6 +40,8 @@ export const authAPI = {
   login: (data) => api.post('/auth/login', data),
   register: (data) => api.post('/auth/register', data),
   getMe: () => api.get('/auth/me'),
+  changePassword: (data) => api.post('/auth/change-password', data),
+
 };
 
 // Member APIs
@@ -48,6 +50,11 @@ export const memberAPI = {
   createProfile: (data) => api.post('/members/', data),
   getAllMembers: () => api.get('/members/'),
   registerUser: (data) => api.post('/auth/register', data),
+  updateProfile: (memberId, data) => api.put(`/members/${memberId}`, data),
+  getUserById: (userId) => api.get(`/users/${userId}`), // You'll need to add this endpoint or use auth/me
+  getAllMembersWithUsers: () => api.get('/members/admin/all-members'),
+
+
 
 };
 

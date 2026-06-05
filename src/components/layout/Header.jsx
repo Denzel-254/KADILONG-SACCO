@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   FiMenu, FiX, FiHome, FiCreditCard, FiDollarSign, FiShield, 
-  FiUsers, FiBell, FiSettings, FiBarChart2, FiBriefcase, FiFileText, FiLogOut 
+  FiUsers, FiBell, FiSettings, FiBarChart2, FiBriefcase, FiFileText, FiLogOut, FiUser
 } from 'react-icons/fi';
 
 const Header = ({ isAuthenticated, user, onLogout }) => {
@@ -47,10 +47,8 @@ const Header = ({ isAuthenticated, user, onLogout }) => {
     e.preventDefault();
     setIsMenuOpen(false);
     
-    // If we're not on the home page, navigate to home first then scroll
     if (window.location.pathname !== '/') {
       navigate('/');
-      // Wait for navigation to complete then scroll
       setTimeout(() => {
         const element = document.getElementById(sectionId);
         if (element) {
@@ -63,14 +61,6 @@ const Header = ({ isAuthenticated, user, onLogout }) => {
         element.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }
-  };
-
-  // Handle public link click (either route or scroll)
-  const handlePublicLinkClick = (e, link) => {
-    if (link.isScroll) {
-      handleScrollToSection(e, link.href);
-    }
-    // For home link, just let the Link component handle it
   };
 
   const getInitials = () => {
@@ -188,8 +178,12 @@ const Header = ({ isAuthenticated, user, onLogout }) => {
                           {getRoleDisplayName()}
                         </span>
                       </div>
-                      <Link to="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Profile Settings</Link>
-                      <button onClick={handleLogout} className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-50">Sign Out</button>
+                      <Link to="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center">
+                        <FiUser className="w-4 h-4 mr-2" /> Profile Settings
+                      </Link>
+                      <button onClick={handleLogout} className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-50">
+                        Sign Out
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -257,6 +251,9 @@ const Header = ({ isAuthenticated, user, onLogout }) => {
                     <link.icon className="w-4 h-4" /><span>{link.name}</span>
                   </Link>
                 ))}
+                <Link to="/profile" className="flex items-center space-x-2 py-2 text-gray-600 hover:text-blue-600" onClick={() => setIsMenuOpen(false)}>
+                  <FiUser className="w-4 h-4" /><span>Profile Settings</span>
+                </Link>
                 <button onClick={() => { handleLogout(); setIsMenuOpen(false); }} className="flex items-center space-x-2 w-full mt-4 pt-4 border-t text-red-600">
                   <FiLogOut className="w-4 h-4" /><span>Sign Out</span>
                 </button>

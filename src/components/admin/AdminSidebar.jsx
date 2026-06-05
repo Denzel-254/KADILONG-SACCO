@@ -3,14 +3,14 @@ import {
   FiHome, FiUsers, FiBriefcase, FiBell, FiBarChart2, 
   FiSettings, FiDollarSign, FiShield, FiFileText, 
   FiCreditCard, FiTarget, FiAlertCircle, FiLogOut,
-  FiChevronDown, FiChevronRight, FiTrendingUp
+  FiChevronDown, FiChevronRight
 } from 'react-icons/fi';
 import { useState } from 'react';
 
 const AdminSidebar = ({ user, onLogout }) => {
   const location = useLocation();
   const [expandedMenus, setExpandedMenus] = useState({
-    loans: true,  // Set to true to show loan submenu by default
+    loans: true,
     collections: false,
   });
 
@@ -23,16 +23,8 @@ const AdminSidebar = ({ user, onLogout }) => {
   };
 
   const menuItems = [
-    {
-      name: 'Dashboard',
-      path: '/admin/dashboard',
-      icon: FiHome,
-    },
-    {
-      name: 'Member Management',
-      path: '/admin/members',
-      icon: FiUsers,
-    },
+    { name: 'Dashboard', path: '/admin/dashboard', icon: FiHome },
+    { name: 'Member Management', path: '/admin/members', icon: FiUsers },
     {
       name: 'Loan Management',
       icon: FiBriefcase,
@@ -45,11 +37,7 @@ const AdminSidebar = ({ user, onLogout }) => {
         { name: 'Active Loans', path: '/admin/active-loans', icon: FiDollarSign },
       ]
     },
-    {
-      name: 'Savings Management',
-      path: '/admin/savings',
-      icon: FiDollarSign,
-    },
+    { name: 'Savings Management', path: '/admin/savings', icon: FiDollarSign },
     {
       name: 'Collection Management',
       icon: FiAlertCircle,
@@ -61,21 +49,9 @@ const AdminSidebar = ({ user, onLogout }) => {
         { name: 'Defaulters', path: '/admin/defaulters', icon: FiAlertCircle },
       ]
     },
-    {
-      name: 'Reports & Analytics',
-      path: '/admin/reports',
-      icon: FiBarChart2,
-    },
-    {
-      name: 'Penalty Settings',
-      path: '/admin/penalty-settings',
-      icon: FiSettings,
-    },
-    {
-      name: 'System Settings',
-      path: '/admin/settings',
-      icon: FiSettings,
-    },
+    { name: 'Reports & Analytics', path: '/admin/reports', icon: FiBarChart2 },
+    { name: 'Penalty Settings', path: '/admin/penalty-settings', icon: FiSettings },
+    { name: 'System Settings', path: '/admin/settings', icon: FiSettings },
   ];
 
   const getInitials = () => {
@@ -86,7 +62,7 @@ const AdminSidebar = ({ user, onLogout }) => {
   };
 
   return (
-    <aside className="w-72 bg-gray-900 text-gray-300 flex flex-col min-h-screen sticky top-0">
+    <aside className="w-72 bg-gray-900 text-gray-300 flex flex-col h-screen sticky top-0">
       {/* Admin Logo */}
       <div className="p-6 border-b border-gray-800">
         <div className="flex items-center space-x-3">
@@ -113,9 +89,9 @@ const AdminSidebar = ({ user, onLogout }) => {
         </div>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 py-6 overflow-y-auto">
-        <div className="px-4 mb-2">
+      {/* Navigation - with scroll only here */}
+      <nav className="flex-1 overflow-y-auto">
+        <div className="px-4 pt-6 pb-2">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Main Menu</p>
         </div>
         
@@ -170,7 +146,7 @@ const AdminSidebar = ({ user, onLogout }) => {
         ))}
       </nav>
 
-      {/* Logout Button */}
+      {/* Logout Button - fixed at bottom */}
       <div className="p-4 border-t border-gray-800">
         <button
           onClick={onLogout}
