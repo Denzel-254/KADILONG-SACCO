@@ -27,12 +27,14 @@ const LoanApprovals = () => {
   const fetchLoans = async () => {
     try {
       const response = await adminAPI.getPendingLoans();
-      // Separate pending and approved loans
-      const allLoans = response.data;
+      const allLoans = response.data || [];
       setPendingLoans(allLoans.filter(loan => loan.status === 'pending'));
       setApprovedLoans(allLoans.filter(loan => loan.status === 'approved'));
     } catch (error) {
+      console.error('Error fetching loans:', error);
       toast.error('Failed to load loans');
+      setPendingLoans([]);
+      setApprovedLoans([]);
     } finally {
       setLoading(false);
     }
@@ -128,29 +130,34 @@ const LoanApprovals = () => {
         <p className="text-gray-600 mt-1">Review, approve, and disburse loan applications</p>
       </div>
 
-      {/* Tabs */}
-      <div className="border-b border-gray-200 mb-6">
-        <nav className="flex space-x-8">
-          <button className="py-2 px-1 border-b-2 border-blue-600 text-blue-600 font-medium">
-            Pending Approvals ({pendingLoans.length})
-          </button>
-          <button className="py-2 px-1 text-gray-500 hover:text-gray-700">
-            Approved ({approvedLoans.length})
-          </button>
-        </nav>
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="bg-yellow-50 rounded-xl p-6 border border-yellow-200">
+          <p className="text-sm text-yellow-700">Pending Approvals</p>
+          <p className="text-3xl font-bold text-yellow-800">{pendingLoans.length}</p>
+          <p className="text-xs text-yellow-600 mt-1">Awaiting review</p>
+        </div>
+        <div className="bg-green-50 rounded-xl p-6 border border-green-200">
+          <p className="text-sm text-green-700">Approved Ready for Disbursement</p>
+          <p className="text-3xl font-bold text-green-800">{approvedLoans.length}</p>
+          <p className="text-xs text-green-600 mt-1">Ready to disburse</p>
+        </div>
       </div>
 
       {/* Pending Loans Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-8">
+        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
+          <h2 className="text-lg font-semibold text-gray-900">Pending Applications ({pendingLoans.length})</h2>
+        </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Loan Number</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Member</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Period</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Applied Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
               </tr>
             </thead>
@@ -165,6 +172,17 @@ const LoanApprovals = () => {
                 pendingLoans.map((loan) => (
                   <tr key={loan.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">{loan.loan_number}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                          <FiUser className="w-4 h-4 text-blue-600" />
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-sm font-medium text-gray-900">{loan.member_name || 'Unknown'}</p>
+                          <p className="text-xs text-gray-500">{loan.member_number}</p>
+                        </div>
+                      </div>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
                       KES {loan.amount_applied?.toLocaleString()}
                     </td>
@@ -173,11 +191,6 @@ const LoanApprovals = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {new Date(loan.applied_date).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs rounded-full ${getStatusBadge(loan.status)}`}>
-                        {loan.status}
-                      </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <div className="flex space-x-2">
@@ -212,53 +225,55 @@ const LoanApprovals = () => {
         </div>
       </div>
 
-      {/* Approved Loans Table with Disburse Button */}
+      {/* Approved Loans Table */}
       {approvedLoans.length > 0 && (
-        <div className="mt-8">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Approved Loans Ready for Disbursement</h2>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Loan Number</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount Approved</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Approved Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
+            <h2 className="text-lg font-semibold text-gray-900">Approved Loans Ready for Disbursement ({approvedLoans.length})</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Loan Number</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Member</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount Approved</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {approvedLoans.map((loan) => (
+                  <tr key={loan.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">{loan.loan_number}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                          <FiUser className="w-4 h-4 text-blue-600" />
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-sm font-medium text-gray-900">{loan.member_name || 'Unknown'}</p>
+                          <p className="text-xs text-gray-500">{loan.member_number}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                      KES {loan.amount_approved?.toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <button
+                        onClick={() => {
+                          setSelectedLoan(loan);
+                          setShowDisburseModal(true);
+                        }}
+                        className="bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700 transition text-xs flex items-center"
+                      >
+                        <FiSend className="w-3 h-3 mr-1" /> Disburse
+                      </button>
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {approvedLoans.map((loan) => (
-                    <tr key={loan.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">{loan.loan_number}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                        KES {loan.amount_approved?.toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {loan.approved_date ? new Date(loan.approved_date).toLocaleDateString() : '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs rounded-full ${getStatusBadge(loan.status)}`}>
-                          {loan.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <button
-                          onClick={() => {
-                            setSelectedLoan(loan);
-                            setShowDisburseModal(true);
-                          }}
-                          className="bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700 transition text-xs flex items-center"
-                        >
-                          <FiSend className="w-3 h-3 mr-1" /> Disburse
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
@@ -276,6 +291,8 @@ const LoanApprovals = () => {
               <div className="bg-gray-50 p-4 rounded-lg">
                 <p className="text-sm text-gray-600">Loan Number</p>
                 <p className="font-semibold">{selectedLoan.loan_number}</p>
+                <p className="text-sm text-gray-600 mt-2">Member</p>
+                <p className="font-semibold">{selectedLoan.member_name}</p>
                 <p className="text-sm text-gray-600 mt-2">Amount Applied</p>
                 <p className="font-semibold">KES {selectedLoan.amount_applied.toLocaleString()}</p>
               </div>
@@ -331,13 +348,14 @@ const LoanApprovals = () => {
         </div>
       )}
 
-      {/* Disbursement Modal */}
+      {/* Disbursement Modal - Same as before */}
       {showDisburseModal && selectedLoan && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowDisburseModal(false)}>
           <div className="bg-white rounded-xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
             <div className="p-6 border-b border-gray-100">
               <h2 className="text-xl font-bold text-gray-900">Disburse Loan</h2>
               <p className="text-sm text-gray-500 mt-1">Loan: {selectedLoan.loan_number}</p>
+              <p className="text-sm text-gray-500">Member: {selectedLoan.member_name}</p>
             </div>
             <div className="p-6 space-y-4">
               <div className="bg-green-50 p-4 rounded-lg mb-4">

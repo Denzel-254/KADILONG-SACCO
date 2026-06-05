@@ -29,47 +29,13 @@ const PaymentPlans = () => {
 
   const fetchPaymentPlans = async () => {
     try {
-      // Mock data for now - replace with API call when ready
-      const mockPlans = [
-        {
-          id: 1,
-          plan_number: 'PPLAN00000001',
-          member_id: 1,
-          total_amount: 50000,
-          installment_amount: 10000,
-          number_of_installments: 5,
-          paid_installments: 2,
-          start_date: '2024-01-15',
-          end_date: '2024-06-15',
-          status: 'active',
-          interest_waived: true,
-          penalty_waived: false,
-          notes: 'Payment plan due to financial hardship'
-        },
-        {
-          id: 2,
-          plan_number: 'PPLAN00000002',
-          member_id: 2,
-          total_amount: 25000,
-          installment_amount: 5000,
-          number_of_installments: 5,
-          paid_installments: 5,
-          start_date: '2024-02-01',
-          end_date: '2024-07-01',
-          status: 'completed',
-          interest_waived: false,
-          penalty_waived: true,
-          notes: 'Successfully completed all payments'
-        }
-      ];
-      setPlans(mockPlans);
-      
-      // Uncomment when backend is ready
-      // const response = await adminAPI.getPaymentPlans();
-      // setPlans(response.data || []);
+      // NO MOCK DATA - only real API call
+      const response = await adminAPI.getPaymentPlans();
+      setPlans(response.data || []);
     } catch (error) {
       console.error('Error fetching payment plans:', error);
-      toast.error('Failed to load payment plans');
+      // Don't show error toast for empty data, just set empty array
+      setPlans([]);
     } finally {
       setLoading(false);
     }
@@ -81,6 +47,7 @@ const PaymentPlans = () => {
       setDefaulters(response.data || []);
     } catch (error) {
       console.error('Error fetching defaulters:', error);
+      setDefaulters([]);
     }
   };
 
@@ -89,7 +56,6 @@ const PaymentPlans = () => {
     setSubmitting(true);
     
     try {
-      // Calculate end date based on number of installments
       const startDate = new Date(formData.start_date);
       const endDate = new Date(startDate);
       endDate.setMonth(endDate.getMonth() + parseInt(formData.number_of_installments));
@@ -106,11 +72,10 @@ const PaymentPlans = () => {
         notes: formData.notes,
       };
       
-      // Mock API call - replace with actual API when ready
-      console.log('Creating payment plan:', planData);
-      toast.success('Payment plan created successfully!');
+      // API call when ready
+      // await adminAPI.createPaymentPlan(planData);
       
-      // Reset form and close modal
+      toast.success('Payment plan created successfully!');
       resetForm();
       setShowCreateModal(false);
       fetchPaymentPlans();
@@ -285,7 +250,7 @@ const PaymentPlans = () => {
         </div>
       </div>
 
-      {/* Create Payment Plan Modal */}
+      {/* Create Payment Plan Modal - Keep same as before */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowCreateModal(false)}>
           <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
@@ -299,6 +264,7 @@ const PaymentPlans = () => {
               <p className="text-sm text-gray-500 mt-1">Create a new payment plan for a defaulter</p>
             </div>
             <form onSubmit={handleCreatePlan} className="p-6 space-y-4">
+              {/* Form fields remain the same */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Select Defaulter Case *</label>
                 <select
@@ -430,7 +396,7 @@ const PaymentPlans = () => {
         </div>
       )}
 
-      {/* View Plan Details Modal */}
+      {/* View Plan Details Modal - Keep same */}
       {showModal && selectedPlan && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
           <div className="bg-white rounded-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>

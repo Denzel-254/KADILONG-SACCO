@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { FiEye, FiDollarSign, FiUser, FiCalendar, FiTrendingUp, FiDownload } from 'react-icons/fi';
+import { FiEye, FiDollarSign, FiUser, FiCalendar, FiTrendingUp, FiDownload, FiRefreshCw } from 'react-icons/fi';
 import { loanAPI } from '../../services/api';
 import toast from 'react-hot-toast';
 
 const ActiveLoans = () => {
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [loans, setLoans] = useState([]);
   const [selectedLoan, setSelectedLoan] = useState(null);
   const [schedule, setSchedule] = useState(null);
@@ -16,15 +17,22 @@ const ActiveLoans = () => {
 
   const fetchActiveLoans = async () => {
     try {
-      // Use the admin endpoint to get all active loans
       const response = await loanAPI.getAllActiveLoans();
-      setLoans(response.data);
+      setLoans(response.data || []);
     } catch (error) {
       console.error('Error fetching active loans:', error);
       toast.error('Failed to load active loans');
+      setLoans([]);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchActiveLoans();
+    toast.success('Active loans refreshed');
   };
 
   const viewSchedule = async (loanId) => {
@@ -54,9 +62,19 @@ const ActiveLoans = () => {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Active Loans</h1>
-        <p className="text-gray-600 mt-1">Monitor all active loan portfolios</p>
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Active Loans</h1>
+          <p className="text-gray-600 mt-1">Monitor all active loan portfolios</p>
+        </div>
+        <button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center disabled:opacity-50"
+        >
+          <FiRefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+          {refreshing ? 'Refreshing...' : 'Refresh'}
+        </button>
       </div>
 
       {/* Stats */}
@@ -105,6 +123,7 @@ const ActiveLoans = () => {
               {loans.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
+                    <FiDollarSign className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                     No active loans found
                   </td>
                 </tr>
@@ -118,7 +137,7 @@ const ActiveLoans = () => {
                           <FiUser className="w-4 h-4 text-blue-600" />
                         </div>
                         <div className="ml-3">
-                          <p className="text-sm font-medium text-gray-900">{loan.member_name}</p>
+                          <p className="text-sm font-medium text-gray-900">{loan.member_name || 'Unknown'}</p>
                           <p className="text-xs text-gray-500">{loan.member_number}</p>
                         </div>
                       </div>

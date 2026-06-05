@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { FiEye, FiDollarSign, FiUser, FiCalendar, FiClock, FiCheckCircle, FiXCircle } from 'react-icons/fi';
-import { loanAPI } from '../../services/api';
+import { FiEye, FiDollarSign, FiUser, FiCalendar, FiClock, FiCheckCircle, FiXCircle, FiCreditCard } from 'react-icons/fi';
+import { adminAPI } from '../../services/api';
 import toast from 'react-hot-toast';
 
 const LoanApplications = () => {
@@ -15,10 +15,12 @@ const LoanApplications = () => {
 
   const fetchApplications = async () => {
     try {
-      const response = await loanAPI.getPendingApplications();
-      setApplications(response.data);
+      const response = await adminAPI.getPendingLoans();
+      setApplications(response.data || []);
     } catch (error) {
+      console.error('Error fetching applications:', error);
       toast.error('Failed to load loan applications');
+      setApplications([]);
     } finally {
       setLoading(false);
     }
@@ -29,6 +31,8 @@ const LoanApplications = () => {
       pending: 'bg-yellow-100 text-yellow-800',
       approved: 'bg-green-100 text-green-800',
       rejected: 'bg-red-100 text-red-800',
+      active: 'bg-blue-100 text-blue-800',
+      completed: 'bg-gray-100 text-gray-800',
     };
     return badges[status] || 'bg-gray-100 text-gray-800';
   };
@@ -45,7 +49,7 @@ const LoanApplications = () => {
     <div>
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">Loan Applications</h1>
-        <p className="text-gray-600 mt-1">View all loan applications from members</p>
+        <p className="text-gray-600 mt-1">Review pending loan applications from members</p>
       </div>
 
       {/* Stats */}
@@ -73,7 +77,7 @@ const LoanApplications = () => {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Loan Number</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Member</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Member Details</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Period</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Applied Date</th>
@@ -85,6 +89,7 @@ const LoanApplications = () => {
               {applications.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                    <FiCreditCard className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                     No loan applications found
                   </td>
                 </tr>
@@ -98,8 +103,10 @@ const LoanApplications = () => {
                           <FiUser className="w-4 h-4 text-blue-600" />
                         </div>
                         <div className="ml-3">
-                          <p className="text-sm font-medium text-gray-900">Member</p>
-                          <p className="text-xs text-gray-500">ID: {app.member_id}</p>
+                          <p className="text-sm font-medium text-gray-900">{app.member_name || 'Unknown'}</p>
+                          <p className="text-xs text-gray-500">
+                            ID: {app.member_national_id || app.member_number || app.member_id}
+                          </p>
                         </div>
                       </div>
                     </td>
@@ -139,14 +146,41 @@ const LoanApplications = () => {
       {/* Application Details Modal */}
       {showModal && selectedApp && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
-          <div className="bg-white rounded-xl max-w-2xl w-full" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6 border-b border-gray-100">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-100 sticky top-0 bg-white">
               <div className="flex justify-between items-center">
                 <h2 className="text-xl font-bold text-gray-900">Loan Application Details</h2>
                 <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">✕</button>
               </div>
             </div>
             <div className="p-6 space-y-4">
+              <div className="bg-blue-50 p-4 rounded-lg mb-4">
+                <h3 className="font-semibold text-gray-900 mb-2">Applicant Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500">Member Name</p>
+                    <p className="font-semibold">{selectedApp.member_name || 'Unknown'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Member Number</p>
+                    <p className="font-semibold">{selectedApp.member_number || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">National ID</p>
+                    <p className="font-semibold">{selectedApp.member_national_id || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Credit Score</p>
+                    <p className="font-semibold">{selectedApp.credit_score || 0}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Monthly Income</p>
+                    <p className="font-semibold">KES {selectedApp.monthly_income?.toLocaleString() || 0}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <h3 className="font-semibold text-gray-900 mb-2">Loan Details</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs text-gray-500">Loan Number</p>
@@ -176,10 +210,10 @@ const LoanApplications = () => {
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Applied Date</p>
-                  <p className="font-semibold">{new Date(selectedApp.applied_date).toLocaleString()}</p>
+                  <p className="font-semibold">{new Date(selectedApp.applied_date).toLocaleDateString()}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Monthly Payment</p>
+                  <p className="text-xs text-gray-500">Estimated Monthly Payment</p>
                   <p className="font-semibold text-blue-600">
                     KES {Math.round(selectedApp.amount_applied * (selectedApp.interest_rate / 100 / 12) * Math.pow(1 + selectedApp.interest_rate / 100 / 12, selectedApp.repayment_period_months) / (Math.pow(1 + selectedApp.interest_rate / 100 / 12, selectedApp.repayment_period_months) - 1)).toLocaleString()}
                   </p>
