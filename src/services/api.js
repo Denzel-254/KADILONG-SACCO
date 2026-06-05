@@ -1,9 +1,10 @@
 import axios from 'axios';
 
+// Fix: Use the same variable name consistently
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: API_URL,  // Changed from API_BASE_URL to API_URL
   headers: {
     'Content-Type': 'application/json',
   },
@@ -41,7 +42,6 @@ export const authAPI = {
   register: (data) => api.post('/auth/register', data),
   getMe: () => api.get('/auth/me'),
   changePassword: (data) => api.post('/auth/change-password', data),
-
 };
 
 // Member APIs
@@ -51,11 +51,8 @@ export const memberAPI = {
   getAllMembers: () => api.get('/members/'),
   registerUser: (data) => api.post('/auth/register', data),
   updateProfile: (memberId, data) => api.put(`/members/${memberId}`, data),
-  getUserById: (userId) => api.get(`/users/${userId}`), // You'll need to add this endpoint or use auth/me
+  getUserById: (userId) => api.get(`/members/users/${userId}`),
   getAllMembersWithUsers: () => api.get('/members/admin/all-members'),
-
-
-
 };
 
 // Loan APIs
@@ -73,8 +70,6 @@ export const loanAPI = {
   getLoanSummary: () => api.get('/loans/my-summary'),
   getAllActiveLoans: () => api.get('/loans/admin/active-loans'),
   getApprovedLoans: () => api.get('/loans/applications/approved'),
-
-
 };
 
 // Savings APIs
@@ -104,15 +99,9 @@ export const adminAPI = {
   updatePenaltySettings: (data) => api.put('/penalty/settings/1', data),
   getCollectionCases: () => api.get('/collection/cases'),
   getPaymentPlans: () => api.get('/collection/payment-plans'),
-  getPaymentPlans: () => api.get('/collection/payment-plans'),
-  getCollectionCases: () => api.get('/collection/cases'),
   createPaymentPlan: (data) => api.post('/collection/payment-plans', data),
   updatePaymentPlan: (planId, data) => api.put(`/collection/payment-plans/${planId}`, data),
-  getDefaulters: () => api.get('/penalty/defaulters'),
   deleteMember: (memberId) => api.delete(`/members/${memberId}`),
-
-
-
 };
 
 // Report APIs
